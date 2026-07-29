@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart Video Cropper · Pro</title>
+  <title>Landscape → Portrait · crop & convert</title>
   <style>
     * {
       box-sizing: border-box;
@@ -49,47 +49,13 @@
     }
     .sub {
       color: #a8b2d1;
-      margin-bottom: 1.5rem;
+      margin-bottom: 2rem;
       font-size: 0.95rem;
       border-left: 3px solid #4f7df3;
       padding-left: 1rem;
       background: rgba(79, 125, 243, 0.06);
       border-radius: 0 12px 12px 0;
       line-height: 1.5;
-    }
-    .settings-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-      background: rgba(0, 0, 0, 0.2);
-      padding: 1rem;
-      border-radius: 1.2rem;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-    }
-    .setting-item {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-    .setting-item label {
-      color: #8892b0;
-      font-size: 0.8rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    select, input {
-      background: #1a233b;
-      border: 1px solid #31416a;
-      color: #f0f3fa;
-      padding: 0.6rem;
-      border-radius: 0.8rem;
-      font-size: 0.9rem;
-      outline: none;
-    }
-    select:focus, input:focus {
-      border-color: #4f7df3;
     }
     .dropzone {
       background: rgba(12, 17, 29, 0.6);
@@ -135,6 +101,10 @@
       transition: 0.15s;
       border: 1px solid #4c5d84;
     }
+    .file-label:hover {
+      background: #3f4f7a;
+      border-color: #6b8aff;
+    }
     input[type="file"] {
       display: none;
     }
@@ -150,15 +120,17 @@
       overflow: hidden;
       box-shadow: inset 0 4px 12px rgba(0,0,0,0.6);
       position: relative;
-      max-height: 400px;
-      display: flex;
-      justify-content: center;
     }
     video {
       display: block;
-      height: 100%;
-      width: auto;
+      width: 100%;
+      height: auto;
       background: #070a12;
+      aspect-ratio: 16/9;  /* default landscape fallback */
+      object-fit: cover;    /* crop to fill container (portrait) */
+    }
+    .video-wrapper.portrait video {
+      aspect-ratio: 9/16;   /* force portrait crop */
       object-fit: cover;
     }
     .badge {
@@ -210,10 +182,30 @@
     .btn-primary:hover {
       background: #5f8aff;
       transform: scale(1.01);
+      border-color: #8aabff;
     }
     .btn-primary:disabled {
       opacity: 0.4;
       pointer-events: none;
+      filter: grayscale(0.5);
+    }
+    .btn-secondary {
+      background: #27314f;
+      border-color: #3c4a6e;
+    }
+    .btn-secondary:hover {
+      background: #32426b;
+      border-color: #5b70a0;
+    }
+    .btn-success {
+      background: #2d7a5c;
+      border-color: #3f9a77;
+    }
+    .btn-success:hover {
+      background: #3a8f6d;
+    }
+    .btn:active {
+      transform: scale(0.97);
     }
     .info-text {
       color: #7b89b0;
@@ -223,93 +215,73 @@
       border-top: 1px solid #25304b;
       padding-top: 1.2rem;
     }
+    .info-text strong {
+      color: #b0c0f0;
+      font-weight: 500;
+    }
     .filename {
       color: #c8d4f5;
+      font-weight: 400;
+      background: #141c30;
+      padding: 0.2rem 1rem;
+      border-radius: 30px;
+      font-size: 0.8rem;
+      border: 1px solid #31416a;
       max-width: 180px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .custom-res-inputs {
-      display: flex;
-      gap: 0.5rem;
-      align-items: center;
-    }
-    .custom-res-inputs input {
-      width: 70px;
-      text-align: center;
+    @media (max-width: 480px) {
+      .card { padding: 1.5rem; }
+      .dropzone { padding: 2rem 1rem; }
+      .btn { padding: 0.6rem 1.2rem; }
     }
   </style>
 </head>
 <body>
   <div class="card">
     <h1>
-      ⟳ Smart Cropper
-      <small>landscape → mobile fit</small>
+      ⟳ Crop to Portrait
+      <small>landscape → portrait</small>
     </h1>
     <div class="sub">
-      ⚡ Auto-fits your specific phone screen resolution
-    </div>
-
-    <!-- Settings -->
-    <div class="settings-grid">
-      <div class="setting-item">
-        <label>Target Device</label>
-        <select id="deviceSelect">
-          <option value="1080x2340">Huawei Y9 Prime (1080x2340)</option>
-          <option value="1080x1920">Standard Portrait (9:16)</option>
-          <option value="1170x2532">iPhone 13/14 (19.5:9)</option>
-          <option value="1290x2796">iPhone 14/15 Pro Max</option>
-          <option value="custom">Custom Resolution...</option>
-        </select>
-      </div>
-      <div class="setting-item" id="customResGroup" style="display: none;">
-        <label>Custom W x H</label>
-        <div class="custom-res-inputs">
-          <input type="number" id="customWidth" value="1080" placeholder="W">
-          <span style="color: #4f7df3;">×</span>
-          <input type="number" id="customHeight" value="2340" placeholder="H">
-        </div>
-      </div>
-      <div class="setting-item" id="autoDetectGroup">
-        <label>Auto-Detect</label>
-        <button class="btn" id="detectBtn" style="padding: 0.4rem; font-size: 0.8rem; border-radius: 0.5rem;">Use My Screen</button>
-      </div>
+      ⚡ removes black bars (left/right) · smart crop center
     </div>
 
     <!-- dropzone -->
     <div class="dropzone" id="dropzone">
       <p>
         <span>🎬</span>
-        Drop landscape video here
-        <label class="file-label" for="fileInput">choose file</label>
+        Drop your landscape video here
+        <label class="file-label" for="fileInput">or choose file</label>
       </p>
       <input type="file" id="fileInput" accept="video/*">
+      <div style="margin-top: 10px; font-size: 0.8rem; color: #6f7ea0;">MP4, WebM, MOV · max 200MB</div>
     </div>
 
-    <!-- preview -->
+    <!-- preview + crop display -->
     <div class="preview-container" id="previewContainer" style="display: none;">
       <div class="badge">
         <span class="filename" id="fileName">video.mp4</span>
-        <span id="statusBadge">⏺ processing</span>
+        <span id="statusBadge" style="background: #2f3d66;">⏺ portrait crop</span>
       </div>
-      <div class="video-wrapper" id="videoWrapper">
+      <div class="video-wrapper portrait" id="videoWrapper">
         <video id="videoPlayer" controls playsinline></video>
       </div>
-      <div style="text-align: center; font-size: 0.8rem; color: #8895c0; margin-top: 0.5rem;">
-        <span id="aspectHint" style="background: #1b233b; padding: 0.2rem 1rem; border-radius: 30px;">Aspect: 9:19.5</span>
+      <div style="display: flex; gap: 0.3rem; justify-content: center; font-size: 0.8rem; color: #8895c0;">
+        <span style="background: #1b233b; padding: 0.1rem 0.8rem; border-radius: 30px;">⏺ center crop (9:16)</span>
       </div>
     </div>
 
     <!-- action buttons -->
     <div class="action-bar">
-      <button class="btn" id="resetBtn" disabled>↺ reset</button>
-      <button class="btn btn-primary" id="convertBtn" disabled>⬇ Download for Phone</button>
+      <button class="btn btn-secondary" id="resetBtn" disabled>↺ reset</button>
+      <button class="btn btn-primary" id="convertBtn" disabled>⬇ download portrait</button>
     </div>
-    
     <div class="info-text">
-      <strong>Pro Tip:</strong> We crop the center area to match your phone's exact pixels.<br>
-      Keep this tab active while the video plays to encode.
+      <strong>How it works:</strong> crops the center 9:16 area from landscape · black bars removed<br>
+      <em>Note: Video will play during conversion. Keep the tab active.</em>
     </div>
   </div>
 
@@ -318,171 +290,270 @@
       const dropzone = document.getElementById('dropzone');
       const fileInput = document.getElementById('fileInput');
       const videoPlayer = document.getElementById('videoPlayer');
+      const videoWrapper = document.getElementById('videoWrapper');
       const previewContainer = document.getElementById('previewContainer');
       const fileNameSpan = document.getElementById('fileName');
       const statusBadge = document.getElementById('statusBadge');
       const convertBtn = document.getElementById('convertBtn');
       const resetBtn = document.getElementById('resetBtn');
-      const deviceSelect = document.getElementById('deviceSelect');
-      const customResGroup = document.getElementById('customResGroup');
-      const customWidth = document.getElementById('customWidth');
-      const customHeight = document.getElementById('customHeight');
-      const detectBtn = document.getElementById('detectBtn');
-      const aspectHint = document.getElementById('aspectHint');
-      const videoWrapper = document.getElementById('videoWrapper');
 
       let currentFile = null;
       let objectURL = null;
 
-      // Handle Device Selection
-      deviceSelect.addEventListener('change', () => {
-        if (deviceSelect.value === 'custom') {
-          customResGroup.style.display = 'flex';
-        } else {
-          customResGroup.style.display = 'none';
-          updatePreviewAspect();
-        }
-      });
-
-      [customWidth, customHeight].forEach(el => el.addEventListener('input', updatePreviewAspect));
-
-      function getTargetResolution() {
-        if (deviceSelect.value === 'custom') {
-          return { 
-            w: parseInt(customWidth.value) || 1080, 
-            h: parseInt(customHeight.value) || 1920 
-          };
-        }
-        const [w, h] = deviceSelect.value.split('x').map(Number);
-        return { w, h };
-      }
-
-      function updatePreviewAspect() {
-        const res = getTargetResolution();
-        const ratio = res.w / res.h;
-        aspectHint.textContent = `Target: ${res.w} × ${res.h} (Ratio: ${ratio.toFixed(2)})`;
-        
-        // Update CSS aspect ratio for preview
-        videoPlayer.style.aspectRatio = `${res.w} / ${res.h}`;
-      }
-
-      detectBtn.addEventListener('click', () => {
-        const w = window.screen.width * window.devicePixelRatio;
-        const h = window.screen.height * window.devicePixelRatio;
-        // Ensure portrait
-        const realW = Math.min(w, h);
-        const realH = Math.max(w, h);
-        
-        customWidth.value = Math.round(realW);
-        customHeight.value = Math.round(realH);
-        deviceSelect.value = 'custom';
-        customResGroup.style.display = 'flex';
-        updatePreviewAspect();
-        alert(`Detected Screen: ${Math.round(realW)}x${Math.round(realH)}`);
-      });
-
+      // ------ helpers ------
       function resetUI() {
-        if (objectURL) URL.revokeObjectURL(objectURL);
+        if (objectURL) {
+          URL.revokeObjectURL(objectURL);
+          objectURL = null;
+        }
         videoPlayer.src = '';
+        videoPlayer.removeAttribute('src');
+        videoPlayer.load();
         previewContainer.style.display = 'none';
         currentFile = null;
         convertBtn.disabled = true;
         resetBtn.disabled = true;
-        updatePreviewAspect();
+        fileNameSpan.textContent = 'no file';
+        statusBadge.textContent = '⏺ portrait crop';
+        videoWrapper.classList.add('portrait');
+        
+        const dropzoneP = dropzone.querySelector('p');
+        if (dropzoneP) {
+          dropzoneP.innerHTML = `
+            <span>🎬</span>
+            Drop your landscape video here
+            <label class="file-label" for="fileInput">or choose file</label>
+          `;
+        }
       }
 
-      function handleFile(file) {
-        if (!file || !file.type.startsWith('video/')) return;
+      function loadVideo(file) {
+        if (!file) return;
+        if (!file.type.startsWith('video/')) {
+          alert('Please select a valid video file.');
+          return;
+        }
+        if (objectURL) {
+          URL.revokeObjectURL(objectURL);
+        }
         currentFile = file;
         objectURL = URL.createObjectURL(file);
         videoPlayer.src = objectURL;
-        videoPlayer.muted = true;
+        videoPlayer.muted = true; // Mute for easier recording
+        videoPlayer.load();
+        
         previewContainer.style.display = 'flex';
         convertBtn.disabled = false;
         resetBtn.disabled = false;
-        fileNameSpan.textContent = file.name;
-        statusBadge.textContent = '✅ Ready';
-        updatePreviewAspect();
+        fileNameSpan.textContent = file.name.length > 25 ? file.name.slice(0, 22)+'…' : file.name;
+        statusBadge.textContent = '⏺ portrait crop (9:16)';
+        videoWrapper.classList.add('portrait');
+
+        videoPlayer.onloadedmetadata = function() {
+          const vw = videoPlayer.videoWidth;
+          const vh = videoPlayer.videoHeight;
+          if (vw && vh) {
+            if (vw / vh > 1.2) {
+              statusBadge.textContent = '✅ landscape detected · crop to portrait';
+            } else {
+              statusBadge.textContent = '📐 portrait or square · crop to 9:16';
+            }
+          }
+        };
+      }
+
+      function handleFile(file) {
+        if (!file) return;
+        loadVideo(file);
+        const dropzoneP = dropzone.querySelector('p');
+        if (dropzoneP) {
+          dropzoneP.innerHTML = `
+            <span>📁</span>
+            <span style="color:#b7c6f0;">${file.name}</span>
+            <span style="font-size:0.8rem; color:#7b8ab0;">ready · drop another to replace</span>
+          `;
+        }
       }
 
       function downloadPortrait() {
-        const res = getTargetResolution();
-        const video = videoPlayer;
-        const vw = video.videoWidth;
-        const vh = video.videoHeight;
-        const targetAspect = res.w / res.h;
-
-        let cropW, cropH, offX, offY;
-
-        if (vw / vh >= targetAspect) {
-          cropH = vh;
-          cropW = vh * targetAspect;
-          offX = (vw - cropW) / 2;
-          offY = 0;
-        } else {
-          cropW = vw;
-          cropH = vw / targetAspect;
-          offX = 0;
-          offY = (vh - cropH) / 2;
+        if (!videoPlayer.src || !currentFile) {
+          alert('No video loaded.');
+          return;
         }
 
+        const video = videoPlayer;
+        if (video.readyState < 2) {
+          alert('Video not ready. Please wait for it to load.');
+          return;
+        }
+
+        const vw = video.videoWidth;
+        const vh = video.videoHeight;
+        const targetAspect = 9 / 16; 
+        let cropWidth, cropHeight, offsetX, offsetY;
+
+        if (vw / vh >= targetAspect) {
+          cropHeight = vh;
+          cropWidth = vh * targetAspect;
+          offsetX = (vw - cropWidth) / 2;
+          offsetY = 0;
+        } else {
+          cropWidth = vw;
+          cropHeight = vw / targetAspect;
+          offsetX = 0;
+          offsetY = (vh - cropHeight) / 2;
+        }
+
+        cropWidth = Math.round(cropWidth);
+        cropHeight = Math.round(cropHeight);
+        offsetX = Math.round(offsetX);
+        offsetY = Math.round(offsetY);
+
         const canvas = document.createElement('canvas');
-        canvas.width = res.w;
-        canvas.height = res.h;
+        canvas.width = cropWidth;
+        canvas.height = cropHeight;
         const ctx = canvas.getContext('2d');
 
-        const stream = canvas.captureStream(30);
+        // Capture Stream
+        const canvasStream = canvas.captureStream(30);
         
-        // Audio
+        // Try to add audio track from original video
         try {
-          const vStream = video.captureStream ? video.captureStream() : video.mozCaptureStream();
-          if (vStream.getAudioTracks().length > 0) stream.addTrack(vStream.getAudioTracks()[0]);
-        } catch(e) {}
+          const videoStream = video.captureStream ? video.captureStream() : video.mozCaptureStream();
+          const audioTracks = videoStream.getAudioTracks();
+          if (audioTracks.length > 0) {
+            canvasStream.addTrack(audioTracks[0]);
+          }
+        } catch (e) {
+          console.warn('Could not capture audio track:', e);
+        }
 
-        const recorder = new MediaRecorder(stream, {
-          mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm',
-          videoBitsPerSecond: 8000000
+        // Determine supported MIME type
+        const types = [
+          'video/webm;codecs=vp9,opus',
+          'video/webm;codecs=vp8,opus',
+          'video/webm',
+          'video/mp4'
+        ];
+        let supportedType = '';
+        for (const type of types) {
+          if (MediaRecorder.isTypeSupported(type)) {
+            supportedType = type;
+            break;
+          }
+        }
+
+        if (!supportedType) {
+          alert('MediaRecorder is not supported in your browser.');
+          return;
+        }
+
+        const mediaRecorder = new MediaRecorder(canvasStream, {
+          mimeType: supportedType,
+          videoBitsPerSecond: 5000000,
         });
 
         let chunks = [];
-        recorder.ondataavailable = e => chunks.push(e.data);
-        recorder.onstop = () => {
-          const blob = new Blob(chunks, { type: 'video/webm' });
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(chunks, { type: supportedType.split(';')[0] });
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `${currentFile.name.split('.')[0]}_${res.w}x${res.h}.webm`;
+          const extension = supportedType.includes('mp4') ? '.mp4' : '.webm';
+          a.download = currentFile.name.replace(/\.[^.]+$/, '') + '_portrait' + extension;
+          document.body.appendChild(a);
           a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 5000);
+          
+          chunks = [];
           convertBtn.disabled = false;
-          convertBtn.textContent = '⬇ Download for Phone';
+          convertBtn.textContent = '⬇ download portrait';
+          video.onended = null;
         };
 
+        mediaRecorder.onerror = (e) => {
+          alert('Encoding error: ' + e.message);
+          convertBtn.disabled = false;
+          convertBtn.textContent = '⬇ download portrait';
+        };
+
+        // Start recording
         video.currentTime = 0;
-        let active = true;
-        function render() {
-          if (!active) return;
-          ctx.drawImage(video, offX, offY, cropW, cropH, 0, 0, res.w, res.h);
+        video.muted = true; // Ensure it's muted during recording to avoid feedback
+        
+        let recording = true;
+        function drawFrame() {
+          if (!recording) return;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(video, offsetX, offsetY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
           if (video.ended) {
-            active = false;
-            recorder.stop();
+            recording = false;
+            if (mediaRecorder.state === 'recording') mediaRecorder.stop();
           } else {
-            requestAnimationFrame(render);
+            requestAnimationFrame(drawFrame);
           }
         }
 
         video.play().then(() => {
-          recorder.start();
-          render();
+          mediaRecorder.start();
+          drawFrame();
           convertBtn.disabled = true;
-          convertBtn.textContent = '⏳ Encoding...';
+          convertBtn.textContent = '⏳ encoding...';
+        }).catch(err => {
+          alert('Playback failed. Please ensure the video is loaded and try again.');
+          console.error(err);
         });
+
+        video.onended = () => {
+          recording = false;
+          if (mediaRecorder.state === 'recording') mediaRecorder.stop();
+        };
       }
 
-      fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
-      dropzone.addEventListener('click', () => fileInput.click());
+      // -------- event listeners --------
+      fileInput.addEventListener('change', function(e) {
+        if (this.files && this.files.length > 0) {
+          handleFile(this.files[0]);
+        }
+        this.value = '';
+      });
+
+      dropzone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.classList.add('drag-over');
+      });
+      dropzone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        this.classList.remove('drag-over');
+      });
+      dropzone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.classList.remove('drag-over');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          handleFile(files[0]);
+        }
+      });
+      dropzone.addEventListener('click', function(e) {
+        if (e.target.tagName !== 'LABEL' && e.target.closest('label') === null) {
+          fileInput.click();
+        }
+      });
+
       convertBtn.addEventListener('click', downloadPortrait);
-      resetBtn.addEventListener('click', resetUI);
-      updatePreviewAspect();
+
+      resetBtn.addEventListener('click', function() {
+        resetUI();
+        fileInput.value = '';
+        videoPlayer.onended = null;
+      });
+
+      resetUI();
     })();
   </script>
 </body>
